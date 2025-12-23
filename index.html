@@ -495,19 +495,19 @@
                     }
                 }
                 
-                // #7 - Historical hold patterns (using multiple comparables as proxy)
+                // #7 - Strong comparable performance
                 if (theater.challengers > 25000 && theater.completeUnknown > 15000 && theater.nosferatu > 20000) {
                     insights.push({
                         icon: '🔄',
-                        title: 'Proven A24 Loyalty',
-                        text: `Strong results across Challengers, Complete Unknown, AND Nosferatu. Your audience consistently shows up for A24.`,
+                        title: 'Proven Prestige Audience',
+                        text: `Strong results across all comparables. This audience shows up for quality.`,
                         priority: 2
                     });
                 } else if (theater.challengers > 30000 && theater.completeUnknown > 20000) {
                     insights.push({
                         icon: '🔄',
-                        title: 'Repeat A24 Success',
-                        text: `${formatCurrency(theater.challengers)} on Challengers, ${formatCurrency(theater.completeUnknown)} on Complete Unknown. This audience returns.`,
+                        title: 'Strong Comparable Performance',
+                        text: `${formatCurrency(theater.challengers)} on Challengers, ${formatCurrency(theater.completeUnknown)} on Complete Unknown.`,
                         priority: 2
                     });
                 }
@@ -905,18 +905,20 @@
                                 </div>
                             </div>
                             <div class="lg:col-span-2 bg-gray-900/50 rounded-lg p-4">
-                                <div class="flex items-center gap-4 mb-4 border-b border-gray-800 pb-2">
-                                    <button onclick="event.stopPropagation(); setActiveTab('talking-points')" 
-                                            class="text-xs uppercase tracking-wider pb-2 border-b-2 ${state.activeTab === 'talking-points' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'}">
-                                        ${t.status === 'Cnf' ? '🔄 Holdover Points' : '✨ Booking Points'}
-                                    </button>
-                                    <button onclick="event.stopPropagation(); setActiveTab('notes')" 
-                                            class="text-xs uppercase tracking-wider pb-2 border-b-2 ${state.activeTab === 'notes' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'} flex items-center gap-1">
-                                        📝 Call Notes
-                                        ${t.notes && t.notes.length > 0 ? `<span class="bg-gray-700 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">${t.notes.length}</span>` : ''}
-                                    </button>
+                                <div class="flex items-center justify-between gap-3 mb-4 border-b border-gray-800 pb-2">
+                                    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <button onclick="event.stopPropagation(); setActiveTab('talking-points')" 
+                                                class="text-xs uppercase tracking-wider pb-2 border-b-2 whitespace-nowrap ${state.activeTab === 'talking-points' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'}">
+                                            ${t.status === 'Cnf' ? '🔄 Holdover' : '✨ Booking'}
+                                        </button>
+                                        <button onclick="event.stopPropagation(); setActiveTab('notes')" 
+                                                class="text-xs uppercase tracking-wider pb-2 border-b-2 whitespace-nowrap ${state.activeTab === 'notes' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'} flex items-center gap-1">
+                                            📝 Notes
+                                            ${t.notes && t.notes.length > 0 ? `<span class="bg-gray-700 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">${t.notes.length}</span>` : ''}
+                                        </button>
+                                    </div>
                                     ${state.activeTab === 'talking-points' ? `
-                                        <button onclick="event.stopPropagation(); copyTalkingPoints(${t.id})" class="ml-auto text-xs text-orange-500 hover:text-orange-400 px-2 py-1 rounded bg-orange-500/10">Copy All</button>
+                                        <button onclick="event.stopPropagation(); copyTalkingPoints(${t.id})" class="text-xs text-orange-500 hover:text-orange-400 px-3 py-1.5 rounded bg-orange-500/10 shrink-0 whitespace-nowrap">Copy</button>
                                     ` : ''}
                                 </div>
                                 
