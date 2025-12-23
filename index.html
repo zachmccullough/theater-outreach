@@ -53,7 +53,7 @@
         .tooltip-trigger .tooltip-content {
             visibility: hidden; opacity: 0; position: absolute; bottom: 100%; right: 0;
             margin-bottom: 8px; padding: 10px 12px; background: #1f2937; border: 1px solid #374151;
-            border-radius: 8px; font-size: 12px; white-space: nowrap; z-index: 1000;
+            border-radius: 8px; font-size: 12px; white-space: nowrap; z-index: 30;
             box-shadow: 0 10px 25px rgba(0,0,0,0.4); transition: opacity 0.15s, visibility 0.15s;
             pointer-events: none;
         }
@@ -62,6 +62,14 @@
             border-width: 6px; border-style: solid; border-color: #374151 transparent transparent transparent;
         }
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
+        
+        .tooltip-down .tooltip-content {
+            bottom: auto; top: 100%; margin-bottom: 0; margin-top: 8px;
+        }
+        .tooltip-down .tooltip-content::after {
+            top: auto; bottom: 100%;
+            border-color: transparent transparent #374151 transparent;
+        }
         
         .status-dropdown { position: relative; }
         .status-menu {
@@ -99,6 +107,7 @@
         // --- DATA LOADING LOGIC ---
         let RAW_DATA = [];
         let THEATER_DATA = [];
+        let filterOptions = {};
 
         async function initApp() {
             try {
@@ -116,6 +125,17 @@
                     sold: t.so, percentSold: t.ps, showtimes: t.sh, ticketPrice: t.tp, id: t.id,
                     notes: []
                 }));
+                
+                // Compute filter options once after data loads
+                const getUniqueValues = (key) => [...new Set(THEATER_DATA.map(t => t[key]).filter(Boolean))].sort();
+                filterOptions = {
+                    rep: getUniqueValues('a24Rep'),
+                    buyer: getUniqueValues('buyer'),
+                    circuit: getUniqueValues('circuit'),
+                    state: getUniqueValues('state'),
+                    status: ['Cnf', 'Ten', 'Pln', 'Not In TDS'],
+                    tier: [...new Set(THEATER_DATA.map(t => t.tier).filter(t => t != null))].sort((a,b) => a-b).map(String)
+                };
                 
                 // Add sample notes to first theater
                 if (THEATER_DATA.length > 0) {
@@ -682,16 +702,26 @@
             activeTab: 'talking-points',
             newNote: ''
         };
-
-        const getUniqueValues = (key) => [...new Set(THEATER_DATA.map(t => t[key]).filter(Boolean))].sort();
-        const filterOptions = {
-            rep: getUniqueValues('a24Rep'),
-            buyer: getUniqueValues('buyer'),
-            circuit: getUniqueValues('circuit'),
-            state: getUniqueValues('state'),
-            status: ['Cnf', 'Ten', 'Pln', 'Not In TDS'],
-            tier: [...new Set(THEATER_DATA.map(t => t.tier).filter(t => t != null))].sort((a,b) => a-b).map(String)
+        
+        // Debounce utility for performance
+        const debounce = (fn, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn(...args), delay);
+            };
         };
+        
+        // Debounced render for filter typing - restores focus after render
+        const debouncedRender = debounce(() => {
+            const activeId = document.activeElement?.id;
+            const cursorPos = document.activeElement?.selectionStart;
+            render();
+            if (activeId) {
+                const el = document.getElementById(activeId);
+                if (el) { el.focus(); if (cursorPos !== undefined) el.setSelectionRange(cursorPos, cursorPos); }
+            }
+        }, 150);
 
         const getFilteredData = () => {
             let data = THEATER_DATA.filter(t => {
@@ -755,7 +785,7 @@
                     <label class="text-xs text-gray-500 uppercase tracking-wider">${label}</label>
                     <div class="relative">
                         <input type="text" id="filter-search-${id}" placeholder="${selectedVal || 'All'}" value="${isOpen ? searchVal : ''}"
-                            class="w-full bg-gray-800 border ${isOpen ? 'border-orange-500' : 'border-gray-700'} rounded-lg px-3 py-1.5 text-sm ${selectedVal && !isOpen ? 'text-orange-400' : 'text-gray-200'} placeholder-gray-400 focus:outline-none cursor-pointer"
+                            class="w-full bg-gray-800 border ${isOpen ? 'border-orange-500' : 'border-gray-700 hover:border-gray-600'} rounded-lg px-3 py-1.5 text-sm ${selectedVal && !isOpen ? 'text-orange-400' : 'text-gray-200'} placeholder-gray-400 focus:outline-none cursor-pointer transition-colors"
                             onclick="openDropdown('${id}')" oninput="updateFilterSearch('${id}', this.value)" autocomplete="off">
                         ${selectedVal ? `
                             <button onclick="clearFilter('${id}')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
@@ -776,7 +806,7 @@
             `;
         };
 
-        const renderTheaterRow = (t) => {
+        const renderTheaterRow = (t, rowIndex = 0) => {
             const isStatusOpen = state.openStatusDropdown === t.id;
             const statusInfo = getStatusInfo(t.status);
             const isExpanded = state.expandedId === t.id;
@@ -830,7 +860,7 @@
                     <div class="cursor-pointer theater-row text-sm text-gray-300 hide-tablet" data-id="${t.id}">${t.a24Rep || '—'}</div>
                     ${statusDropdown}
                     <div class="cursor-pointer theater-row text-sm text-gray-400 text-center hide-tablet" data-id="${t.id}">${t.tier || '—'}</div>
-                    <div class="text-right tooltip-trigger cursor-pointer theater-row hide-tablet" data-id="${t.id}">
+                    <div class="text-right tooltip-trigger ${rowIndex < 2 ? 'tooltip-down' : ''} cursor-pointer theater-row hide-tablet" data-id="${t.id}">
                         <div class="text-sm text-gray-300">${formatCurrency(t.avgBoxOffice)}</div>
                         <div class="tooltip-content">
                             <div class="text-gray-400 text-xs uppercase tracking-wider mb-2">Comparable Performance</div>
@@ -1159,8 +1189,47 @@
                     </div>
                     
                     <!-- Lead Score Quick Filters -->
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <div class="flex flex-col min-[680px]:flex-row min-[680px]:items-center min-[680px]:justify-between gap-3 min-[680px]:gap-4">
+                        <!-- Mobile: filters scrollable, sort fixed outside -->
+                        <div class="min-[680px]:hidden flex items-center gap-2">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin flex-1">
+                                <button onclick="filterByLeadType('hot')" 
+                                        class="px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${state.leadFilter === 'hot' 
+                                            ? 'bg-orange-500 text-black font-medium' 
+                                            : 'bg-gray-800/50 text-gray-400'}">
+                                    🔥 ${state.mode === 'booking' ? 'Likely' : 'Top'} (${filteredStats.hotLeads})
+                                </button>
+                                <button onclick="filterByLeadType('warm')" 
+                                        class="px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${state.leadFilter === 'warm' 
+                                            ? 'bg-yellow-500 text-black font-medium' 
+                                            : 'bg-gray-800/50 text-gray-400'}">
+                                    ⭐ ${state.mode === 'booking' ? 'Pursuing' : 'Consider'} (${filteredStats.warmLeads})
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-xs text-gray-500 uppercase">Sort:</span>
+                                <div class="relative">
+                                    <button onclick="toggleSortDropdown()" 
+                                            class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 min-w-[120px] justify-between">
+                                        <span>${state.sortKey.charAt(0).toUpperCase() + state.sortKey.slice(1)}</span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    </button>
+                                    ${state.sortDropdownOpen ? `
+                                        <div class="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden min-w-[140px]">
+                                            ${['priority', 'conversion', 'rank', 'comparables', 'presales'].map(k => `
+                                                <div onclick="selectSort('${k}')" 
+                                                     class="px-3 py-2 text-sm ${state.sortKey === k ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">
+                                                    ${k.charAt(0).toUpperCase() + k.slice(1)}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tablet/Desktop: full layout -->
+                        <div class="hidden min-[680px]:flex items-center gap-2 min-[680px]:gap-3 flex-wrap">
                             <span class="text-sm text-gray-500">Quick filter:</span>
                             <button onclick="filterByLeadType('hot')" 
                                     class="px-3 py-1.5 rounded-lg text-sm transition-colors ${state.leadFilter === 'hot' 
@@ -1176,12 +1245,12 @@
                             </button>
                         </div>
                         
-                        <!-- Sort Dropdown (shown below 900px) -->
-                        <div class="min-[900px]:hidden flex items-center gap-2 relative">
+                        <!-- Sort Dropdown (shown 680px-980px) -->
+                        <div class="hidden min-[680px]:flex min-[980px]:hidden items-center gap-2 relative">
                             <span class="text-xs text-gray-500 uppercase shrink-0">Sort:</span>
                             <div class="relative">
                                 <button onclick="toggleSortDropdown()" 
-                                        class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 min-w-[140px] justify-between">
+                                        class="bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 min-w-[140px] justify-between transition-colors">
                                     <span>${state.sortKey.charAt(0).toUpperCase() + state.sortKey.slice(1)}</span>
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                 </button>
@@ -1198,8 +1267,8 @@
                             </div>
                         </div>
                         
-                        <!-- Sort Buttons (shown at 900px+) -->
-                        <div class="hidden min-[900px]:flex items-center gap-3 sm:gap-4">
+                        <!-- Sort Buttons (shown at 980px+) -->
+                        <div class="hidden min-[980px]:flex items-center gap-3 min-[980px]:gap-4">
                             <span class="text-xs text-gray-500 uppercase shrink-0">Sort:</span>
                             ${['priority', 'conversion', 'rank', 'comparables', 'presales'].map(k => `
                                 <button onclick="setSort('${k}')" class="text-xs uppercase tracking-wider shrink-0 ${state.sortKey === k ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}">
@@ -1221,7 +1290,7 @@
                             <div class="text-right hide-mobile">Showtimes</div>
                             <div class="text-right">Presales</div>
                         </div>
-                        <div id="theater-list">${visible.map(t => renderTheaterRow(t)).join('')}</div>
+                        <div id="theater-list">${visible.map((t, idx) => renderTheaterRow(t, idx)).join('')}</div>
                         ${filtered.length === 0 ? `<div class="px-4 py-12 text-center text-gray-500"><p>No theaters match your filters</p><button onclick="clearAllFilters()" class="mt-2 text-orange-500 hover:text-orange-400 text-sm">Clear all filters</button></div>` : ''}
                     </div>
 
@@ -1248,7 +1317,7 @@
         window.executeSearch = (e) => { e.preventDefault(); state.searchQuery = state.pendingSearch; state.visibleCount = 50; render(); };
         window.clearSearch = () => { state.searchQuery = ''; state.pendingSearch = ''; state.visibleCount = 50; render(); };
         window.openDropdown = (id) => { state.openDropdown = state.openDropdown === id ? null : id; state.filterSearches[id] = ''; state.openStatusDropdown = null; render(); setTimeout(() => document.getElementById(`filter-search-${id}`)?.focus(), 0); };
-        window.updateFilterSearch = (id, value) => { state.filterSearches[id] = value; render(); setTimeout(() => { const input = document.getElementById(`filter-search-${id}`); if (input) { input.focus(); input.setSelectionRange(value.length, value.length); } }, 0); };
+        window.updateFilterSearch = (id, value) => { state.filterSearches[id] = value; debouncedRender(); };
         window.selectFilter = (id, value) => { state.filters[id] = value; state.openDropdown = null; state.filterSearches[id] = ''; state.visibleCount = 50; render(); };
         window.clearFilter = (id) => { event.stopPropagation(); state.filters[id] = ''; state.visibleCount = 50; render(); };
         window.clearAllFilters = () => { state.filters = { rep: '', buyer: '', circuit: '', state: '', status: '', tier: '' }; state.leadFilter = ''; state.searchQuery = ''; state.pendingSearch = ''; state.visibleCount = 50; render(); };
