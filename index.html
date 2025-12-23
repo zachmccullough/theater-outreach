@@ -712,16 +712,26 @@
             };
         };
         
-        // Debounced render for filter typing - restores focus after render
-        const debouncedRender = debounce(() => {
-            const activeId = document.activeElement?.id;
-            const cursorPos = document.activeElement?.selectionStart;
-            render();
-            if (activeId) {
-                const el = document.getElementById(activeId);
-                if (el) { el.focus(); if (cursorPos !== undefined) el.setSelectionRange(cursorPos, cursorPos); }
-            }
-        }, 150);
+        // Update just the dropdown options without full re-render
+        const updateDropdownOptions = (id, searchVal) => {
+            const dropdown = document.getElementById(`dropdown-options-${id}`);
+            if (!dropdown) return;
+            
+            const options = filterOptions[id] || [];
+            const filtered = options.filter(o => String(o).toLowerCase().includes(searchVal.toLowerCase()));
+            
+            dropdown.innerHTML = `
+                <div onclick="selectFilter('${id}', '')" class="px-3 py-2 text-sm text-gray-400 hover:bg-gray-700 cursor-pointer border-b border-gray-700">All</div>
+                ${filtered.slice(0, 50).map(o => `
+                    <div onclick="selectFilter('${id}', '${String(o).replace(/'/g, "\\'")}')" class="px-3 py-2 text-sm ${state.filters[id] === String(o) ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">${o}</div>
+                `).join('')}
+                ${filtered.length > 50 ? `<div class="px-3 py-2 text-xs text-gray-500 border-t border-gray-700">+${filtered.length - 50} more</div>` : ''}
+                ${filtered.length === 0 ? `<div class="px-3 py-2 text-sm text-gray-500">No matches</div>` : ''}
+            `;
+        };
+        
+        // Debounced dropdown update (doesn't re-render page)
+        const debouncedDropdownUpdate = debounce((id, val) => updateDropdownOptions(id, val), 50);
 
         const getFilteredData = () => {
             let data = THEATER_DATA.filter(t => {
@@ -795,11 +805,13 @@
                     </div>
                     ${isOpen ? `
                         <div class="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 autocomplete-dropdown scrollbar-thin">
-                            <div onclick="selectFilter('${id}', '')" class="px-3 py-2 text-sm text-gray-400 hover:bg-gray-700 cursor-pointer border-b border-gray-700">All</div>
-                            ${filteredOptions.slice(0, 50).map(o => `
-                                <div onclick="selectFilter('${id}', '${String(o).replace(/'/g, "\'")}')" class="px-3 py-2 text-sm ${state.filters[id] === String(o) ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">${o}</div>
-                            `).join('')}
-                            ${filteredOptions.length > 50 ? `<div class="px-3 py-2 text-xs text-gray-500 border-t border-gray-700">+${filteredOptions.length - 50} more</div>` : ''}
+                            <div id="dropdown-options-${id}">
+                                <div onclick="selectFilter('${id}', '')" class="px-3 py-2 text-sm text-gray-400 hover:bg-gray-700 cursor-pointer border-b border-gray-700">All</div>
+                                ${filteredOptions.slice(0, 50).map(o => `
+                                    <div onclick="selectFilter('${id}', '${String(o).replace(/'/g, "\\'")}')" class="px-3 py-2 text-sm ${state.filters[id] === String(o) ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">${o}</div>
+                                `).join('')}
+                                ${filteredOptions.length > 50 ? `<div class="px-3 py-2 text-xs text-gray-500 border-t border-gray-700">+${filteredOptions.length - 50} more</div>` : ''}
+                            </div>
                         </div>
                     ` : ''}
                 </div>
@@ -1317,7 +1329,7 @@
         window.executeSearch = (e) => { e.preventDefault(); state.searchQuery = state.pendingSearch; state.visibleCount = 50; render(); };
         window.clearSearch = () => { state.searchQuery = ''; state.pendingSearch = ''; state.visibleCount = 50; render(); };
         window.openDropdown = (id) => { state.openDropdown = state.openDropdown === id ? null : id; state.filterSearches[id] = ''; state.openStatusDropdown = null; render(); setTimeout(() => document.getElementById(`filter-search-${id}`)?.focus(), 0); };
-        window.updateFilterSearch = (id, value) => { state.filterSearches[id] = value; debouncedRender(); };
+        window.updateFilterSearch = (id, value) => { state.filterSearches[id] = value; debouncedDropdownUpdate(id, value); };
         window.selectFilter = (id, value) => { state.filters[id] = value; state.openDropdown = null; state.filterSearches[id] = ''; state.visibleCount = 50; render(); };
         window.clearFilter = (id) => { event.stopPropagation(); state.filters[id] = ''; state.visibleCount = 50; render(); };
         window.clearAllFilters = () => { state.filters = { rep: '', buyer: '', circuit: '', state: '', status: '', tier: '' }; state.leadFilter = ''; state.searchQuery = ''; state.pendingSearch = ''; state.visibleCount = 50; render(); };
