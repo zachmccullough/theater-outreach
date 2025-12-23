@@ -1220,25 +1220,22 @@
                                     ⭐ ${state.mode === 'booking' ? 'Pursuing' : 'Consider'} (${filteredStats.warmLeads})
                                 </button>
                             </div>
-                            <div class="flex items-center gap-2 shrink-0">
-                                <span class="text-xs text-gray-500 uppercase">Sort:</span>
-                                <div class="relative">
-                                    <button onclick="toggleSortDropdown()" 
-                                            class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 min-w-[120px] justify-between">
-                                        <span>${state.sortKey.charAt(0).toUpperCase() + state.sortKey.slice(1)}</span>
-                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                                    </button>
-                                    ${state.sortDropdownOpen ? `
-                                        <div class="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden min-w-[140px]">
-                                            ${['priority', 'conversion', 'rank', 'comparables', 'presales'].map(k => `
-                                                <div onclick="selectSort('${k}')" 
-                                                     class="px-3 py-2 text-sm ${state.sortKey === k ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">
-                                                    ${k.charAt(0).toUpperCase() + k.slice(1)}
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
+                            <div class="relative shrink-0">
+                                <button onclick="toggleSortDropdown()" 
+                                        class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 min-w-[120px] justify-between">
+                                    <span>${state.sortKey.charAt(0).toUpperCase() + state.sortKey.slice(1)}</span>
+                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                                ${state.sortDropdownOpen ? `
+                                    <div class="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden min-w-[140px]">
+                                        ${['priority', 'conversion', 'rank', 'comparables', 'presales'].map(k => `
+                                            <div onclick="selectSort('${k}')" 
+                                                 class="px-3 py-2 text-sm ${state.sortKey === k ? 'text-orange-400 bg-orange-500/10' : 'text-gray-200'} hover:bg-gray-700 cursor-pointer">
+                                                ${k.charAt(0).toUpperCase() + k.slice(1)}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                         
